@@ -2,14 +2,18 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: gcc build active file",
-            "command": "/usr/bin/gcc",
+            "label": "C/C++: aarch64-linux-gnu-gcc build active file",
+            "command": "/usr/bin/aarch64-linux-gnu-gcc",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "*.c",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}/${fileBasenameNoExtension}",
+                "-lm",
+                "-lgps",
+                "-lcurl",
+                
             ],
             "options": {
                 "cwd": "${fileDirname}"
