@@ -53,8 +53,17 @@ int main(int argc, char *argv[])
 
     gpsConnect();
 
-    while (exitLoop == 0 && gps_waiting(&gpsData, 5000000))
+    while (!exitLoop)
     {
+
+        if(!gps_waiting(&gpsData, 5000000)){
+            int result = gpsReset();
+            if(result != 0){
+                printf("Cannot reset gps: %d\n", result);
+                sleep(5);
+            }
+            continue;
+        }
 
         read_result = gps_read(&gpsData, NULL, 0);
         if (-1 == read_result)
@@ -80,6 +89,7 @@ int main(int argc, char *argv[])
             gpsData.fix.mode >= MODE_STR_NUM)
         {
             gpsReset(); //mode should be 2 or 3, otherwise no meaningful data
+            continue;
         }
 
        
@@ -208,7 +218,7 @@ int gpsDisconnect()
         return stopStream;
     }
     int closeResult = gps_close(&gpsData);
-    return 0;
+    return closeResult;
 }
 
 int gpsReset(){
