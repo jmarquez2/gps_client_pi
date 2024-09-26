@@ -5,7 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <math.h>
 #include "cJSON.h"
+
+#define PI acos(-1.0)
 
 #define MODE_STR_NUM 4
 static char *mode_str[MODE_STR_NUM] = {
@@ -35,9 +38,10 @@ int gpsDisconnect();
 
 int gpsReset();
 
-
-
 void sigintHandler(int number);
+
+double toRadians(double degrees);
+double distanceInMeters(double lat1, double lon1, double lat2, double lon2);
 
 
 int main(int argc, char *argv[])
@@ -97,6 +101,12 @@ int main(int argc, char *argv[])
         if (isfinite(gpsData.fix.latitude) &&
             isfinite(gpsData.fix.longitude))
         {
+            double distance = distanceInMeters(previousLatitude, previousLongitude, gpsData.fix.latitude, gpsData.fix.longitude);
+            if(distance > 10.0){
+                printf("New location found: %lf, %lf\n", gpsData.fix.latitude, gpsData.fix.longitude);
+                previousLatitude = gpsData.fix.latitude;
+                previousLongitude = gpsData.fix.longitude;
+            }
 
             curl_response result = makePost(gpsData.fix.latitude, gpsData.fix.longitude);
 
@@ -235,4 +245,28 @@ void sigintHandler(int number)
 {
     puts("Signal sent");
     exitLoop = 1;
+}
+
+
+double toRadians(double degrees){
+    return degrees * PI / 180;
+}
+
+double distanceInMeters(double lat1, double lon1, double lat2, double lon2){
+    double earthRadius = 6371000;
+
+    double distanceLatitude = toRadians(lat2 - lat1);
+    double distanceLongitude = toRadians(lon2 - lon1);
+
+    double latitude1 = toRadians(lat1);
+    double latitude2 = toRadians(lat2);
+
+    double a = pow(sin(distanceLatitude / 2), 2) + 
+               pow(sin(distanceLongitude / 2), 2) * cos(latitude1) * cos(latitude2);
+
+    double c = 2 * atan2(sqrt(a), sqrt(1-a));
+
+    return earthRadius * c;
+
+    
 }
