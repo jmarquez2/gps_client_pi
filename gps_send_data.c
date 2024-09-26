@@ -46,6 +46,7 @@ double distanceInMeters(double lat1, double lon1, double lat2, double lon2);
 
 int main(int argc, char *argv[])
 {
+    setbuf(stdout, NULL);
 
     signal(SIGINT, sigintHandler);
 
