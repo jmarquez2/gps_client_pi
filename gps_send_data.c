@@ -30,7 +30,7 @@ double roundSixPlaces(double var);
 
 size_t response_data(void *b, size_t size, size_t nmemb, void *userp);
 
-curl_response makePost(double latitude, double longitude);
+curl_response makePost(double latitude, double longitude, bool save);
 
 int gpsConnect();
 
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
     signal(SIGINT, sigintHandler);
 
-    double previousLatitude = 0;
+    double previousLatitude = 0; // this will triiger the save function at the start of the application
     double previousLongitude = 0;
     int read_result = 0;
 
@@ -103,13 +103,17 @@ int main(int argc, char *argv[])
             isfinite(gpsData.fix.longitude))
         {
             double distance = distanceInMeters(previousLatitude, previousLongitude, gpsData.fix.latitude, gpsData.fix.longitude);
-            if(distance > 10.0){
+
+            bool save = false;
+
+            if(distance > 200.0){ // save only if there are 200 meters of difference with previous distance
                 printf("New location found: %lf, %lf\n", gpsData.fix.latitude, gpsData.fix.longitude);
                 previousLatitude = gpsData.fix.latitude;
                 previousLongitude = gpsData.fix.longitude;
+                save = true;
             }
 
-            curl_response result = makePost(gpsData.fix.latitude, gpsData.fix.longitude);
+            curl_response result = makePost(gpsData.fix.latitude, gpsData.fix.longitude, save);
 
             if (!(result.statusCode == 200 || result.curlCode != CURLE_ABORTED_BY_CALLBACK))
             {
@@ -146,7 +150,7 @@ size_t response_data(void *b, size_t size, size_t nmemb, void *userp)
     return size * nmemb;
 }
 
-curl_response makePost(double latitude, double longitude)
+curl_response makePost(double latitude, double longitude, bool save)
 {
     CURL *curl;
     CURLcode res;
@@ -162,14 +166,22 @@ curl_response makePost(double latitude, double longitude)
         return resp;
     }
 
+    char *deviceId = getenv("DEVICE_ID");
+
+
     cJSON *latitudeJson = cJSON_CreateNumber(latitude);
     cJSON *longitudeJson = cJSON_CreateNumber(longitude);
+    cJSON *deviceIdJson = cJSON_CreateString(deviceId);
+    cJSON *isSaveJson = cJSON_CreateBool(save);
+
 
     cJSON *jObj = cJSON_CreateObject();
 
     cJSON_AddItemToObject(jObj, "latitude", latitudeJson);
-
     cJSON_AddItemToObject(jObj, "longitude", longitudeJson);
+    cJSON_AddItemToObject(jObj, "deviceId", deviceIdJson);
+    cJSON_AddItemToObject(jObj, "save", isSaveJson);
+
 
     char *jsonObj = cJSON_Print(jObj);
 
@@ -179,6 +191,7 @@ curl_response makePost(double latitude, double longitude)
     headers = curl_slist_append(headers, "charset: utf-8");
 
     char *url = getenv("GPS_API");
+
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, response_data);
